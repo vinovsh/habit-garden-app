@@ -105,15 +105,64 @@ jobs:
           "$RUNNER_TEMP/unity" license activate --personal --accept-eula
           "$RUNNER_TEMP/unity" install 6000.3.26f1 -m android --cm --accept-eula
       - name: Build Android APK
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          "$RUNNER_TEMP/unity" build "$GITHUB_WORKSPACE" --target Android --execute-method HabitGarden.Editor.ProjectSetup.BuildApk --editor-version 6000.3.26f1 --allow-dirty-build
-      - name: Verify APK archive
-        shell: bash
-        run: |
-          sha256sum Builds/HabitGarden-test.apk
-          unzip -t Builds/HabitGarden-test.apk > "$RUNNER_TEMP/apk-integrity.txt"
-          echo "APK ZIP integrity verified."
+          set -euo pipefail
+          build_log="$RUNNER_TEMP/unity-build-output.log"
+          export HG_BUILD_LOG="$build_log"
+          publish_status() {
+            HG_BUILD_STATE="$1" HG_BUILD_ATTEMPT="$2" HG_SOURCE_COMMIT="$(git rev-parse HEAD)" python3 - <<'PY'
+          import base64,hashlib,json,os,re,subprocess
+          from pathlib import Path
+          errors=[]
+          log=Path(os.environ["HG_BUILD_LOG"])
+          if log.exists():
+              for line in log.read_text(errors="replace").splitlines():
+                  if re.search(r"error CS[0-9]+|(?:InvalidOperation|NullReference|Argument|TypeLoad|FileNotFound)Exception:|^Error: Build failed",line):
+                      if line not in errors: errors.append(line[:1200])
+          state={"run_id":int(os.environ["GITHUB_RUN_ID"]),"state":os.environ["HG_BUILD_STATE"],"attempt":int(os.environ["HG_BUILD_ATTEMPT"]),"source_commit":os.environ["HG_SOURCE_COMMIT"],"errors":errors[:12]}
+          apk=Path("Builds/HabitGarden-test.apk")
+          if state["state"]=="success" and apk.exists():
+              state["apk_bytes"]=apk.stat().st_size
+              state["apk_sha256"]=hashlib.sha256(apk.read_bytes()).hexdigest()
+          endpoint="repos/vinovsh/habit-garden-app/contents/.ci/unity-build-status.json"
+          current=subprocess.run(["gh","api",endpoint+"?ref="+os.environ["GITHUB_REF_NAME"],"--jq",".sha"],capture_output=True,text=True)
+          payload={"message":"Record Unity build "+state["state"],"branch":os.environ["GITHUB_REF_NAME"],"content":base64.b64encode(json.dumps(state).encode()).decode()}
+          if current.returncode==0: payload["sha"]=current.stdout.strip()
+          data=Path(os.environ["RUNNER_TEMP"])/"unity-build-status-payload.json"
+          data.write_text(json.dumps(payload))
+          subprocess.run(["gh","api","--method","PUT",endpoint,"--input",str(data)],check=True,stdout=subprocess.DEVNULL)
+          data.unlink()
+          PY
+          }
+          for build_attempt in 1 2 3; do
+            rm -f "$build_log"
+            publish_status building "$build_attempt"
+            if "$RUNNER_TEMP/unity" build "$GITHUB_WORKSPACE" --target Android --execute-method HabitGarden.Editor.ProjectSetup.BuildApk --editor-version 6000.3.26f1 --allow-dirty-build 2>&1 | tee "$build_log"; then
+              sha256sum Builds/HabitGarden-test.apk
+              unzip -t Builds/HabitGarden-test.apk > "$RUNNER_TEMP/apk-integrity.txt"
+              echo "APK ZIP integrity verified."
+              publish_status success "$build_attempt"
+              exit 0
+            fi
+            publish_status awaiting_fix "$build_attempt"
+            if [ "$build_attempt" = "3" ]; then exit 1; fi
+            echo "Waiting up to 10 minutes for a source fix; this Unity sign-in remains active."
+            updated=false
+            for poll in $(seq 1 60); do
+              git fetch --quiet origin "$GITHUB_REF_NAME"
+              if ! git diff --quiet HEAD FETCH_HEAD -- Assets Packages ProjectSettings Tools; then
+                next_head=$(git rev-parse FETCH_HEAD)
+                git reset --hard "$next_head"
+                updated=true
+                break
+              fi
+              sleep 10
+            done
+            if [ "$updated" != "true" ]; then exit 1; fi
+          done
       - name: Upload APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
