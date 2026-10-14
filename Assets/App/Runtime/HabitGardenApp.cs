@@ -28,7 +28,7 @@ namespace HabitGarden
             Application.targetFrameRate = 30; Screen.orientation = ScreenOrientation.Portrait;
             font = Resources.Load<TMP_FontAsset>("GardenFont");
             if (font == null) font = TMP_Settings.defaultFontAsset;
-            if (font == null) font = TMP_FontAsset.CreateFontAsset(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
+            if (font == null) throw new InvalidOperationException("Run Habit Garden / Prepare project to generate the bundled font before starting the app.");
             round = RoundedSprite(); BuildShell();
             garden = new GameObject("Garden View").AddComponent<GardenView>(); garden.Init();
             garden.Selected += id => { selectedPlant = id; Render(); };

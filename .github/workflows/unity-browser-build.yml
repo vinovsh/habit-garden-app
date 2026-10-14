@@ -89,6 +89,12 @@ jobs:
         shell: bash
         run: |
           "$RUNNER_TEMP/unity" build "$GITHUB_WORKSPACE" --target Android --execute-method HabitGarden.Editor.ProjectSetup.BuildApk --editor-version 6000.3.26f1 --allow-dirty-build
+      - name: Verify APK archive
+        shell: bash
+        run: |
+          sha256sum Builds/HabitGarden-test.apk
+          unzip -t Builds/HabitGarden-test.apk > "$RUNNER_TEMP/apk-integrity.txt"
+          echo "APK ZIP integrity verified."
       - name: Upload APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -101,3 +107,4 @@ jobs:
         run: |
           "$RUNNER_TEMP/unity" auth logout >/dev/null 2>&1 || true
           rm -f "$RUNNER_TEMP/unity-auth-private.log"
+

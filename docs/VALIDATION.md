@@ -41,3 +41,7 @@ Verified run: https://github.com/vinovsh/habit-garden-app/actions/runs/385723904
 - Full Unity EditMode and APK jobs: skipped because activation configuration is unavailable.
 
 Follow-up layout adjustments reserve two lines for headings, remove shop label overlap, add an active streak summary and explain reminder management. They do not alter the tested domain rules and will run through the same PR source checks. No rendered/device validation is claimed.
+
+## First Unity UI build attempt
+
+Run https://github.com/vinovsh/habit-garden-app/actions/runs/38573104321 successfully activated Unity and installed Android support. The actual Unity Runtime/Editor/Test C# assemblies compiled without errors. Build preparation then failed when TMP tried to load the built-in LegacyRuntime font, which cannot supply an importable font face. The follow-up fix imports TMP Essential Resources and generates the font from its bundled Liberation Sans source with font data enabled. An APK is not claimed from the failed run.

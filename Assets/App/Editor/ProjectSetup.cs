@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.PackageManager;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -16,14 +17,7 @@ namespace HabitGarden.Editor
         [MenuItem("Habit Garden/Prepare project")]
         public static void Prepare() {
             Directory.CreateDirectory("Assets/Settings");Directory.CreateDirectory("Assets/Scenes");Directory.CreateDirectory("Assets/Resources");AssetDatabase.Refresh();
-            if(AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Resources/GardenFont.asset")==null) {
-                var font=TMP_FontAsset.CreateFontAsset(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
-                font.name="GardenFont";AssetDatabase.CreateAsset(font,"Assets/Resources/GardenFont.asset");
-                foreach(var atlas in font.atlasTextures)AssetDatabase.AddObjectToAsset(atlas,font);
-                AssetDatabase.AddObjectToAsset(font.material,font);
-                font.TryAddCharacters("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?':;/-+()✓•·");
-                EditorUtility.SetDirty(font);
-            }
+            PrepareFont();
             var pipeline=AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>("Assets/Settings/GardenPipeline.asset");
             if(pipeline==null) {
                 var renderer=ScriptableObject.CreateInstance<UniversalRendererData>();AssetDatabase.CreateAsset(renderer,"Assets/Settings/GardenRenderer.asset");
@@ -49,6 +43,31 @@ namespace HabitGarden.Editor
             string path="Assets/Scenes/Bootstrap.unity";
             if(!File.Exists(path)){var scene=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);EditorSceneManager.SaveScene(scene,path);}
             EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene(path,true)};AssetDatabase.SaveAssets();
+        }
+        static void PrepareFont()
+        {
+            const string destination="Assets/Resources/GardenFont.asset";
+            if(AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(destination)!=null)return;
+            var package=PackageInfo.FindForAssetPath("Packages/com.unity.ugui/package.json");
+            if(package==null)throw new InvalidOperationException("Resolve the Unity uGUI package before preparing the project.");
+            string essentials=Path.Combine(package.resolvedPath,"Package Resources/TMP Essential Resources.unitypackage");
+            if(File.Exists(essentials) && (Shader.Find("TextMeshPro/Distance Field")==null || AssetDatabase.LoadAssetAtPath<Font>("Assets/TextMesh Pro/Fonts/LiberationSans.ttf")==null)) {
+                AssetDatabase.ImportPackage(essentials,false);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            }
+            var source=AssetDatabase.LoadAssetAtPath<Font>("Assets/TextMesh Pro/Fonts/LiberationSans.ttf")
+                ?? AssetDatabase.LoadAssetAtPath<Font>("Packages/com.unity.ugui/Package Resources/Fonts/LiberationSans.ttf");
+            if(source==null)throw new InvalidOperationException("Import TMP Essential Resources before preparing the project; the bundled Liberation Sans font is required.");
+            if(Shader.Find("TextMeshPro/Distance Field")==null)throw new InvalidOperationException("TMP Essential Resources must include the TextMeshPro Distance Field shader.");
+            var importer=AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(source)) as TrueTypeFontImporter;
+            if(importer!=null && !importer.includeFontData){importer.includeFontData=true;importer.SaveAndReimport();}
+            var font=TMP_FontAsset.CreateFontAsset(source);
+            if(font==null)throw new InvalidOperationException("Could not generate the bundled TMP font. Check its font import settings.");
+            font.name="GardenFont";
+            font.TryAddCharacters("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?':;/-+()✓•·");
+            AssetDatabase.CreateAsset(font,destination);
+            foreach(var atlas in font.atlasTextures)AssetDatabase.AddObjectToAsset(atlas,font);
+            AssetDatabase.AddObjectToAsset(font.material,font);EditorUtility.SetDirty(font);
         }
         [MenuItem("Habit Garden/Build test APK")]
         public static void BuildApk() {
