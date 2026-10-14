@@ -45,3 +45,11 @@ Follow-up layout adjustments reserve two lines for headings, remove shop label o
 ## First Unity UI build attempt
 
 Run https://github.com/vinovsh/habit-garden-app/actions/runs/38573104321 successfully activated Unity and installed Android support. The actual Unity Runtime/Editor/Test C# assemblies compiled without errors. Build preparation then failed when TMP tried to load the built-in LegacyRuntime font, which cannot supply an importable font face. The follow-up fix imports TMP Essential Resources and generates the font from its bundled Liberation Sans source with font data enabled. An APK is not claimed from the failed run.
+
+## Successful Unity UI APK
+
+Run: https://github.com/vinovsh/habit-garden-app/actions/runs/38579214414
+
+Actual source built on retry: `62119ce0715ae85575df682287d354a573e643aa`. Unity Runtime/Editor C# compilation, TMP font/resource generation and Android ARM64 IL2CPP packaging passed. The runner verified APK ZIP integrity and computed SHA-256 `870c2915aebe2ba7f6e2eb5b333b756f91958406ffae461dea27330535ec93f3`. The APK is 36,183,878 bytes. Temporary authentication cleanup passed. See ANDROID_BUILD_RESULT.md for the download.
+
+The independent source workflow https://github.com/vinovsh/habit-garden-app/actions/runs/38583045828 passed the 20 domain tests and source checks for this exact source update. Full Unity EditMode execution and physical-device rendering/accessibility review remain unperformed.
