@@ -1,0 +1,32 @@
+name: Unity connectivity check
+on:
+  push:
+    paths: ['.github/workflows/unity-connectivity.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  connectivity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check Unity service connectivity without credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in https://api.unity.com https://services.api.unity.com; do
+            code=$(curl --silent --show-error --connect-timeout 10 --max-time 20 --output /dev/null --write-out '%{http_code}' "$url")
+            echo "$url returned HTTP $code"
+            test "$code" != '000'
+          done
+      - name: Verify the official browser login CLI on this runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          cli="$RUNNER_TEMP/habit-garden-unity"
+          curl --fail --silent --show-error --connect-timeout 10 --max-time 60 https://public-cdn.cloud.unity3d.com/hub/prod/cli/1.0.0-beta.13/unity-linux-x64 --output "$cli"
+          echo "a84dace1f5e85b629fff841ddfc5ec8e97fd2a178242fca91c80bc5680142fb3  $cli" | sha256sum --check
+          chmod +x "$cli"
+          "$cli" --version
+          "$cli" auth login --help
+          "$cli" license activate --help
