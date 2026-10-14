@@ -1,1 +1,1 @@
-{"run_id": 38579214414, "state": "building", "attempt": 2, "source_commit": "62119ce0715ae85575df682287d354a573e643aa", "errors": []}
+{"run_id": 38579214414, "state": "success", "attempt": 2, "source_commit": "62119ce0715ae85575df682287d354a573e643aa", "errors": [], "apk_bytes": 36183878, "apk_sha256": "870c2915aebe2ba7f6e2eb5b333b756f91958406ffae461dea27330535ec93f3"}
