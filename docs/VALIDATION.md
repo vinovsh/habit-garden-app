@@ -25,3 +25,19 @@ Source commit tested: cf15b0ea6b64de38e68025e1436da2359bc2b139. The source job c
 Source syntax parsing does not establish API compatibility or runtime correctness. The initial source pins Unity 6000.3.26f1 and URP 17.3, but they must be imported and tested together on a licensed Unity host. The project intentionally does not manufacture a package lock or claim successful engine import.
 
 Python source parsing dependencies used here: `tree-sitter` and `tree-sitter-c-sharp`. They are verification tools, not mobile app dependencies.
+
+
+## Product UI source validation
+
+UI implementation commit: `eb03b5138909c7576afade067a67026b556a6469`.
+
+Verified run: https://github.com/vinovsh/habit-garden-app/actions/runs/38572390440
+
+- Actual C# domain compilation: passed on .NET 8.
+- NUnit: 20 passed, 0 failed, 0 skipped, including four new presentation tests.
+- Tree-sitter parsing: 21 C# files and Android Java bridge passed.
+- Metadata: 34 unique GUIDs, no missing authored-asset metadata.
+- JSON manifests, shell syntax and git whitespace checks: passed.
+- Full Unity EditMode and APK jobs: skipped because activation configuration is unavailable.
+
+Follow-up layout adjustments reserve two lines for headings, remove shop label overlap, add an active streak summary and explain reminder management. They do not alter the tested domain rules and will run through the same PR source checks. No rendered/device validation is claimed.

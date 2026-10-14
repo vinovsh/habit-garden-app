@@ -64,7 +64,7 @@ namespace HabitGarden
         }
         void Heading(RectTransform list,string title,string subtitle)
         {
-            var card = Card(list,94,cream); Label(card,title,2,0,Width-4,38,28,true); Label(card,subtitle,2,43,Width-4,48,13,false,muted);
+            var card = Card(list,125,cream); Label(card,title,2,0,Width-4,70,28,true); Label(card,subtitle,2,77,Width-4,44,13,false,muted);
         }
         void Section(RectTransform list,string title,string detail = "")
         {

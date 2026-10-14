@@ -16,10 +16,12 @@ namespace HabitGarden
             Heading(list,"Your little garden",DateTime.Now.ToString("dddd, d MMMM",CultureInfo.InvariantCulture)+"  •  Room to grow");
             var due = state.habits.Where(habits.IsDue).ToList();
             int done = due.Count(h => state.days.Any(d => d.habitId == h.id && d.date == habits.Today && d.complete));
-            var summary = Card(list,120,sage);
+            var summary = Card(list,143,sage);
             Label(summary,"TODAY'S LITTLE WINS",16,14,Width-32,22,11,true,green);
             Label(summary,due.Count == 0 ? "A day at your own pace" : done+" of "+due.Count+" habits complete",16,43,Width-32,28,20,true);
             ProgressBar(summary,due.Count == 0 ? 0 : (float)done/due.Count,16,86,Width-32);
+            int bestStreak = state.habits.Where(h => !h.archived && !h.paused).Select(h => habits.Streak(h.id)).DefaultIfEmpty(0).Max();
+            Label(summary,bestStreak+" day best active streak  •  Keep growing gently",16,107,Width-32,26,11,false,green);
             var view = Card(list,285,new Color(.93f,.95f,.87f));
             Label(view,"PLOT "+(garden.Plot+1).ToString("00"),16,14,100,20,11,true,green);
             Label(view,"Tap a plant to say hello",16,39,Width-32,22,12,false,muted);
@@ -118,8 +120,8 @@ namespace HabitGarden
             {
                 string item = Catalog.Items[i], title = titles[i], detail = details[i]; bool owned = state.inventory.Contains(item);
                 var card = Card(list,178); var preview = Panel(card,"Preview",i%2 == 0 ? sage : lavender); Position(preview,14,14,96,148); Art(preview,item,8,20,80,100);
-                Label(card,title,126,18,Width-142,30,18,true); Label(card,detail,126,56,Width-142,43,12,false,muted);
-                Label(card,owned ? "In your collection ✓" : Catalog.Price(item)+" coins",126,108,Width-142,24,13,true,green);
+                Label(card,title,126,18,Width-142,30,18,true); Label(card,detail,126,56,Width-142,32,12,false,muted);
+                Label(card,owned ? "In your collection ✓" : Catalog.Price(item)+" coins",126,91,Width-142,24,13,true,green);
                 Button(card,owned ? "View owned item" : "Preview",126,125,Width-142,48,() => ShopPreview(item,title,detail),sage);
                 // The entire preview area is also a 96 x 148 point target.
                 var previewButton = preview.gameObject.AddComponent<Button>(); previewButton.targetGraphic = preview.GetComponent<Image>(); previewButton.onClick.AddListener(() => ShopPreview(item,title,detail));
@@ -173,6 +175,8 @@ namespace HabitGarden
             Setting(list,"Sound","Soft taps and completion chimes",state.settings.sound,() => Try(() => habits.SetSettings(!state.settings.sound,state.settings.reducedMotion,state.settings.quality,true)));
             Setting(list,"Reduced motion","Disable wind and growth animation",state.settings.reducedMotion,() => Try(() => habits.SetSettings(state.settings.sound,!state.settings.reducedMotion,state.settings.quality,true)));
             CardButton(list,"Graphics: "+state.settings.quality,() => Try(() => habits.SetSettings(state.settings.sound,state.settings.reducedMotion,state.settings.quality == "Low" ? "Medium" : "Low",true)),true);
+            CardButton(list,"Manage habit reminders",() => { habitFilter = "All"; Navigate("Habits"); },true);
+            var reminderNote = Card(list,75,cream); Label(reminderNote,"Enable a reminder inside a habit's edit screen. Permission is requested only when you choose a time; your phone may delay delivery.",8,4,Width-16,67,12,false,muted);
             Section(list,"Your garden stays with you","Habits and backups live locally. No account needed.");
             CardButton(list,"Export a local backup",BackupExport,true); CardButton(list,"Restore a local backup",BackupImport,true);
             CardButton(list,"How your garden grows",() => Navigate("Guide"),true);
