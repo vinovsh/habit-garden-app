@@ -1,1 +1,1 @@
-{"run_id": 38579214414, "state": "building", "attempt": 1, "source_commit": "b37dfafef637fd7a30e50aafc470a3a1e55d34ad", "errors": []}
+{"run_id": 38579214414, "state": "awaiting_fix", "attempt": 1, "source_commit": "b37dfafef637fd7a30e50aafc470a3a1e55d34ad", "errors": ["InvalidOperationException: Import TMP Essential Resources before preparing the project; the bundled Liberation Sans font is required.", "Error: Build failed (exit 1). See log: /home/runner/work/habit-garden-app/habit-garden-app/Logs/build-Android-1791988588190.log"]}
