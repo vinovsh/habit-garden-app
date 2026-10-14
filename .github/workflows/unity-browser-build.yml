@@ -7,7 +7,7 @@ on:
       - '.github/workflows/unity-browser-build.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   browser-build:
     runs-on: ubuntu-latest
@@ -21,6 +21,8 @@ jobs:
           echo "a84dace1f5e85b629fff841ddfc5ec8e97fd2a178242fca91c80bc5680142fb3  $RUNNER_TEMP/unity" | sha256sum -c -
           chmod +x "$RUNNER_TEMP/unity"
       - name: Start browser approval
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -30,6 +32,18 @@ jobs:
             login_url=$(sed -nE 's/.*(https:\/\/services\.api\.unity\.com[^[:space:]]*).*/\1/p' "$auth_log" 2>/dev/null | head -n 1 || true)
             if [ -n "$login_url" ]; then
               printf '%s\n' "$login_url" > "$RUNNER_TEMP/unity-browser-link.txt"
+              export UNITY_APPROVAL_LINK="$login_url"
+              previous_sha=$(gh api "repos/vinovsh/habit-garden-app/contents/.ci/unity-browser-link.json?ref=$GITHUB_REF_NAME" --jq .sha 2>/dev/null || true)
+              export UNITY_APPROVAL_PREVIOUS_SHA="$previous_sha"
+              python3 - <<'PY'
+          import base64,json,os
+          link={"url":os.environ["UNITY_APPROVAL_LINK"],"run_id":int(os.environ["GITHUB_RUN_ID"]),"attempt":int(os.environ["GITHUB_RUN_ATTEMPT"])}
+          payload={"message":"Publish temporary Unity browser approval request","branch":os.environ["GITHUB_REF_NAME"],"content":base64.b64encode(json.dumps(link).encode()).decode()}
+          if os.environ.get("UNITY_APPROVAL_PREVIOUS_SHA"): payload["sha"]=os.environ["UNITY_APPROVAL_PREVIOUS_SHA"]
+          with open(os.environ["RUNNER_TEMP"]+"/unity-link-payload.json","w") as out: json.dump(payload,out)
+          PY
+              gh api --method PUT repos/vinovsh/habit-garden-app/contents/.ci/unity-browser-link.json --input "$RUNNER_TEMP/unity-link-payload.json" > /dev/null
+              rm -f "$RUNNER_TEMP/unity-link-payload.json"
               echo "New Unity browser approval link generated."
               exit 0
             fi
@@ -52,6 +66,11 @@ jobs:
               result=$(cat "$RUNNER_TEMP/unity-auth-exit")
               if [ "$result" = "0" ]; then
                 rm -f "$RUNNER_TEMP/unity-auth-private.log" "$RUNNER_TEMP/unity-browser-link.txt"
+                GH_TOKEN="${{ github.token }}" gh api "repos/vinovsh/habit-garden-app/contents/.ci/unity-browser-link.json?ref=$GITHUB_REF_NAME" --jq .sha > "$RUNNER_TEMP/unity-link-sha" 2>/dev/null || true
+                link_sha=$(cat "$RUNNER_TEMP/unity-link-sha")
+                if [ -n "$link_sha" ]; then
+                  GH_TOKEN="${{ github.token }}" gh api --method DELETE repos/vinovsh/habit-garden-app/contents/.ci/unity-browser-link.json -f message="Remove completed Unity approval request" -f branch="$GITHUB_REF_NAME" -f sha="$link_sha" > /dev/null || true
+                fi
                 echo "UNITY_ACCOUNT_CONNECTED"
                 exit 0
               fi
