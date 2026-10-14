@@ -47,7 +47,7 @@ Ad creatives can be full screen, but the app only opens one after the user expli
 - `Assets/App/Domain`: engine independent rules and serializable records.
 - `Assets/App/Runtime`: persistence, UI, plant generation, ads, audio and reminders.
 - `Assets/App/Editor`: project setup and APK build entry point.
-- `Assets/App/Tests/EditMode`: 24 authored Unity tests, not run here.
+- `Assets/App/Tests/EditMode`: 24 authored Unity tests; 16 domain tests passed through .NET in GitHub Actions. Full Unity execution is pending activation.
 - `Assets/Plugins/Android`: portable JSON backup document picker.
 - `Tools`: build and source validation scripts.
 - `docs`: implementation status and requirements.

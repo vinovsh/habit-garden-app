@@ -8,7 +8,7 @@ Core daily entitlement rules, persistent state, journal recovery, shop economy, 
 
 ## Validation performed in this environment
 
-Source inventory and JSON validation, C# delimiter checks, shell syntax checks, deterministic Unity metadata generation, archive integrity and git checks. These do not prove C# compilation, runtime correctness or visual quality. Authored Unity tests remain unexecuted.
+Source inventory and JSON validation, C# and Java syntax parsing, shell syntax checks, deterministic Unity metadata generation, archive integrity and git checks. GitHub Actions compiled the actual domain C# and passed all 16 domain NUnit tests on 14 October 2026. Unity-specific API compilation, save/geometry tests and visual rendering remain unexecuted. See VALIDATION.md for the run evidence.
 
 ## Required before a usable test APK
 
