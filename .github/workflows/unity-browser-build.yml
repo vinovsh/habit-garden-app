@@ -1,4 +1,5 @@
 name: Unity browser sign-in and Android build
+# Browser approval links must be completed promptly; Unity CLI has its own timeout.
 on:
   push:
     paths:
@@ -48,8 +49,12 @@ jobs:
           for attempt in $(seq 1 120); do
             if [ -f "$RUNNER_TEMP/unity-auth-exit" ]; then
               result=$(cat "$RUNNER_TEMP/unity-auth-exit")
-              rm -f "$RUNNER_TEMP/unity-auth-private.log" "$RUNNER_TEMP/unity-browser-link.txt"
-              if [ "$result" = "0" ]; then echo "UNITY_ACCOUNT_CONNECTED"; exit 0; fi
+              if [ "$result" = "0" ]; then
+                rm -f "$RUNNER_TEMP/unity-auth-private.log" "$RUNNER_TEMP/unity-browser-link.txt"
+                echo "UNITY_ACCOUNT_CONNECTED"
+                exit 0
+              fi
+              python3 -c 'import os; s=open(os.environ["RUNNER_TEMP"]+"/unity-auth-private.log").read().lower(); print("Unity failure category: "+("keyring storage" if any(x in s for x in ["keyring","secret service","dbus"]) else "approval timeout" if any(x in s for x in ["timeout","timed out"]) else "other CLI failure"))'
               echo "Unity sign-in did not complete successfully."
               exit 1
             fi
