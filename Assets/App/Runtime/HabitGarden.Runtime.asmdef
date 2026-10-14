@@ -1,0 +1,1 @@
+{"name":"HabitGarden.Runtime","rootNamespace":"HabitGarden","references":["HabitGarden.Domain","UnityEngine.UI","Unity.RenderPipelines.Universal.Runtime","Unity.Notifications.Android"]}

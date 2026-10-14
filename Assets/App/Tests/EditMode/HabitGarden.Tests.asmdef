@@ -1,0 +1,1 @@
+{"name":"HabitGarden.Tests","references":["HabitGarden.Domain","HabitGarden.Runtime"],"includePlatforms":["Editor"],"optionalUnityReferences":["TestAssemblies"]}

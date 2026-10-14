@@ -4,7 +4,7 @@ Unity Android app source for an offline habit tracker with a procedural 3D garde
 
 ## Current status
 
-Initial implementation, **not a verified release**. No APK has been built. The authoring environment has no Unity editor, Android SDK, NDK or Unity license. C# compilation, Unity EditMode tests, rendering and physical Android checks remain unexecuted. See `docs/STATUS.md` for all gaps.
+Initial implementation, **not a verified release**. No APK has been built. Source and cloud build configuration are maintained in https://github.com/vinovsh/habit-garden-app. The authoring environment has no Unity editor or Android toolchain. GitHub Actions compiles and tests the engine independent domain and checks source syntax. Unity-specific tests and APK builds require activation. See `docs/STATUS.md` for all gaps and `docs/CI_BUILD.md` for setup.
 
 ## Run in Unity
 
@@ -51,6 +51,9 @@ Ad creatives can be full screen, but the app only opens one after the user expli
 - `Assets/Plugins/Android`: portable JSON backup document picker.
 - `Tools`: build and source validation scripts.
 - `docs`: implementation status and requirements.
+- `.github/workflows`: source checks, Unity tests and Android artifact publishing.
+
+The full technical specification is in `docs/TECHNICAL_SPECIFICATION.md`; the original Word document was delivered separately.
 
 All meshes and audio in this prototype are generated from source; no user artwork is needed. They require visual refinement and phone profiling to reach the approved concept's quality.
 

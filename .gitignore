@@ -1,0 +1,15 @@
+Library/
+Temp/
+Obj/
+Logs/
+UserSettings/
+Builds/
+*.csproj
+*.sln
+*.keystore
+*.jks
+.DS_Store
+artifacts/
+Tools/**/bin/
+Tools/**/obj/
+!Tools/**/*.csproj
