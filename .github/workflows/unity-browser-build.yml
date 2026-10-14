@@ -18,33 +18,45 @@ jobs:
           curl --fail --location --silent --show-error https://public-cdn.cloud.unity3d.com/hub/prod/cli/1.0.0-beta.13/unity-linux-x64 -o "$RUNNER_TEMP/unity"
           echo "a84dace1f5e85b629fff841ddfc5ec8e97fd2a178242fca91c80bc5680142fb3  $RUNNER_TEMP/unity" | sha256sum -c -
           chmod +x "$RUNNER_TEMP/unity"
-      - name: Wait for browser approval
+      - name: Start browser approval
         shell: bash
         run: |
           set -euo pipefail
           auth_log="$RUNNER_TEMP/unity-auth-private.log"
-          timeout 1200 "$RUNNER_TEMP/unity" auth login > "$auth_log" 2>&1 &
-          auth_pid=$!
+          nohup bash -c '"$RUNNER_TEMP/unity" auth login > "$RUNNER_TEMP/unity-auth-private.log" 2>&1; echo $? > "$RUNNER_TEMP/unity-auth-exit"' > /dev/null 2>&1 < /dev/null &
           for attempt in $(seq 1 120); do
-            login_url=$(sed -nE 's/.*(https:\/\/services\.api\.unity\.com[^[:space:]]*).*/\1/p' "$auth_log" | head -n 1)
+            login_url=$(sed -nE 's/.*(https:\/\/services\.api\.unity\.com[^[:space:]]*).*/\1/p' "$auth_log" 2>/dev/null | head -n 1 || true)
             if [ -n "$login_url" ]; then
-              printf 'UNITY_BROWSER_APPROVAL_URL=%s\n' "$login_url"
-              break
+              printf '%s\n' "$login_url" > "$RUNNER_TEMP/unity-browser-link.txt"
+              echo "New Unity browser approval link generated."
+              exit 0
             fi
-            if ! kill -0 "$auth_pid" 2>/dev/null; then
-              echo "Unity CLI exited before producing a browser link."
-              exit 1
-            fi
+            if [ -f "$RUNNER_TEMP/unity-auth-exit" ]; then echo "Unity login exited before producing a link."; exit 1; fi
             sleep 2
           done
-          if [ -z "$login_url" ]; then echo "No browser link received."; exit 1; fi
-          if wait "$auth_pid"; then
-            echo "UNITY_ACCOUNT_CONNECTED"
-          else
-            echo "Unity sign-in did not complete successfully."
-            exit 1
-          fi
-          rm -f "$auth_log"
+          echo "No browser link received."
+          exit 1
+      - name: Make sign-in link available
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: unity-browser-approval-link
+          path: ${{ runner.temp }}/unity-browser-link.txt
+          retention-days: 1
+      - name: Wait for browser approval
+        shell: bash
+        run: |
+          for attempt in $(seq 1 120); do
+            if [ -f "$RUNNER_TEMP/unity-auth-exit" ]; then
+              result=$(cat "$RUNNER_TEMP/unity-auth-exit")
+              rm -f "$RUNNER_TEMP/unity-auth-private.log" "$RUNNER_TEMP/unity-browser-link.txt"
+              if [ "$result" = "0" ]; then echo "UNITY_ACCOUNT_CONNECTED"; exit 0; fi
+              echo "Unity sign-in did not complete successfully."
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Unity sign-in timed out."
+          exit 1
       - name: Wait for explicit license agreement approval
         env:
           GH_TOKEN: ${{ github.token }}
