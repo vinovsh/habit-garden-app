@@ -121,7 +121,7 @@ namespace HabitGarden
         {
             var rt = Panel(parent,text == "" ? "Navigation button" : text,tint ?? green); Position(rt,x,y,width,height);
             var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = rt.GetComponent<Image>(); b.onClick.AddListener(() => action());
-            var label = Label(rt,text,12,0,width-24,height,14,true,tint.HasValue ? ink : Color.white); label.alignment = TextAlignmentOptions.Center;
+            var label = Label(rt,text,12,0,width-24,height,14,true,(tint ?? green).grayscale < .55f ? Color.white : ink); label.alignment = TextAlignmentOptions.Center;
             Stretch(label.rectTransform,12,4,12,4); var colors = b.colors; colors.disabledColor = new Color(.82f,.84f,.80f); b.colors = colors; return b;
         }
         GardenArt Art(Transform parent,string kind,float x,float y,float width,float height,Color? tint = null)
