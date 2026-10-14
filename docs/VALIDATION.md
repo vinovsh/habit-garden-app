@@ -25,3 +25,31 @@ Source commit tested: cf15b0ea6b64de38e68025e1436da2359bc2b139. The source job c
 Source syntax parsing does not establish API compatibility or runtime correctness. The initial source pins Unity 6000.3.26f1 and URP 17.3, but they must be imported and tested together on a licensed Unity host. The project intentionally does not manufacture a package lock or claim successful engine import.
 
 Python source parsing dependencies used here: `tree-sitter` and `tree-sitter-c-sharp`. They are verification tools, not mobile app dependencies.
+
+
+## Product UI source validation
+
+UI implementation commit: `eb03b5138909c7576afade067a67026b556a6469`.
+
+Verified run: https://github.com/vinovsh/habit-garden-app/actions/runs/38572390440
+
+- Actual C# domain compilation: passed on .NET 8.
+- NUnit: 20 passed, 0 failed, 0 skipped, including four new presentation tests.
+- Tree-sitter parsing: 21 C# files and Android Java bridge passed.
+- Metadata: 34 unique GUIDs, no missing authored-asset metadata.
+- JSON manifests, shell syntax and git whitespace checks: passed.
+- Full Unity EditMode and APK jobs: skipped because activation configuration is unavailable.
+
+Follow-up layout adjustments reserve two lines for headings, remove shop label overlap, add an active streak summary and explain reminder management. They do not alter the tested domain rules and will run through the same PR source checks. No rendered/device validation is claimed.
+
+## First Unity UI build attempt
+
+Run https://github.com/vinovsh/habit-garden-app/actions/runs/38573104321 successfully activated Unity and installed Android support. The actual Unity Runtime/Editor/Test C# assemblies compiled without errors. Build preparation then failed when TMP tried to load the built-in LegacyRuntime font, which cannot supply an importable font face. The follow-up fix imports TMP Essential Resources and generates the font from its bundled Liberation Sans source with font data enabled. An APK is not claimed from the failed run.
+
+## Successful Unity UI APK
+
+Run: https://github.com/vinovsh/habit-garden-app/actions/runs/38579214414
+
+Actual source built on retry: `62119ce0715ae85575df682287d354a573e643aa`. Unity Runtime/Editor C# compilation, TMP font/resource generation and Android ARM64 IL2CPP packaging passed. The runner verified APK ZIP integrity and computed SHA-256 `870c2915aebe2ba7f6e2eb5b333b756f91958406ffae461dea27330535ec93f3`. The APK is 36,183,878 bytes. Temporary authentication cleanup passed. See ANDROID_BUILD_RESULT.md for the download.
+
+The independent source workflow https://github.com/vinovsh/habit-garden-app/actions/runs/38583045828 passed the 20 domain tests and source checks for this exact source update. Full Unity EditMode execution and physical-device rendering/accessibility review remain unperformed.

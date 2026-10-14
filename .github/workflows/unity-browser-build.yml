@@ -1,4 +1,5 @@
 name: Unity browser sign-in and Android build
+# UI build: browser sign-in authorized by the owner in this session.
 # Browser approval links must be completed promptly; Unity CLI has its own timeout.
 on:
   push:
@@ -6,7 +7,7 @@ on:
       - '.github/workflows/unity-browser-build.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   browser-build:
     runs-on: ubuntu-latest
@@ -20,6 +21,8 @@ jobs:
           echo "a84dace1f5e85b629fff841ddfc5ec8e97fd2a178242fca91c80bc5680142fb3  $RUNNER_TEMP/unity" | sha256sum -c -
           chmod +x "$RUNNER_TEMP/unity"
       - name: Start browser approval
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -29,6 +32,18 @@ jobs:
             login_url=$(sed -nE 's/.*(https:\/\/services\.api\.unity\.com[^[:space:]]*).*/\1/p' "$auth_log" 2>/dev/null | head -n 1 || true)
             if [ -n "$login_url" ]; then
               printf '%s\n' "$login_url" > "$RUNNER_TEMP/unity-browser-link.txt"
+              export UNITY_APPROVAL_LINK="$login_url"
+              previous_sha=$(gh api "repos/vinovsh/habit-garden-app/contents/.ci/unity-browser-link.json?ref=$GITHUB_REF_NAME" --jq .sha 2>/dev/null || true)
+              export UNITY_APPROVAL_PREVIOUS_SHA="$previous_sha"
+              python3 - <<'PY'
+          import base64,json,os
+          link={"url":os.environ["UNITY_APPROVAL_LINK"],"run_id":int(os.environ["GITHUB_RUN_ID"]),"attempt":int(os.environ["GITHUB_RUN_ATTEMPT"])}
+          payload={"message":"Publish temporary Unity browser approval request","branch":os.environ["GITHUB_REF_NAME"],"content":base64.b64encode(json.dumps(link).encode()).decode()}
+          if os.environ.get("UNITY_APPROVAL_PREVIOUS_SHA"): payload["sha"]=os.environ["UNITY_APPROVAL_PREVIOUS_SHA"]
+          with open(os.environ["RUNNER_TEMP"]+"/unity-link-payload.json","w") as out: json.dump(payload,out)
+          PY
+              gh api --method PUT repos/vinovsh/habit-garden-app/contents/.ci/unity-browser-link.json --input "$RUNNER_TEMP/unity-link-payload.json" > /dev/null
+              rm -f "$RUNNER_TEMP/unity-link-payload.json"
               echo "New Unity browser approval link generated."
               exit 0
             fi
@@ -51,6 +66,11 @@ jobs:
               result=$(cat "$RUNNER_TEMP/unity-auth-exit")
               if [ "$result" = "0" ]; then
                 rm -f "$RUNNER_TEMP/unity-auth-private.log" "$RUNNER_TEMP/unity-browser-link.txt"
+                GH_TOKEN="${{ github.token }}" gh api "repos/vinovsh/habit-garden-app/contents/.ci/unity-browser-link.json?ref=$GITHUB_REF_NAME" --jq .sha > "$RUNNER_TEMP/unity-link-sha" 2>/dev/null || true
+                link_sha=$(cat "$RUNNER_TEMP/unity-link-sha")
+                if [ -n "$link_sha" ]; then
+                  GH_TOKEN="${{ github.token }}" gh api --method DELETE repos/vinovsh/habit-garden-app/contents/.ci/unity-browser-link.json -f message="Remove completed Unity approval request" -f branch="$GITHUB_REF_NAME" -f sha="$link_sha" > /dev/null || true
+                fi
                 echo "UNITY_ACCOUNT_CONNECTED"
                 exit 0
               fi
@@ -85,9 +105,64 @@ jobs:
           "$RUNNER_TEMP/unity" license activate --personal --accept-eula
           "$RUNNER_TEMP/unity" install 6000.3.26f1 -m android --cm --accept-eula
       - name: Build Android APK
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          "$RUNNER_TEMP/unity" build "$GITHUB_WORKSPACE" --target Android --execute-method HabitGarden.Editor.ProjectSetup.BuildApk --editor-version 6000.3.26f1 --allow-dirty-build
+          set -euo pipefail
+          build_log="$RUNNER_TEMP/unity-build-output.log"
+          export HG_BUILD_LOG="$build_log"
+          publish_status() {
+            HG_BUILD_STATE="$1" HG_BUILD_ATTEMPT="$2" HG_SOURCE_COMMIT="$(git rev-parse HEAD)" python3 - <<'PY'
+          import base64,hashlib,json,os,re,subprocess
+          from pathlib import Path
+          errors=[]
+          log=Path(os.environ["HG_BUILD_LOG"])
+          if log.exists():
+              for line in log.read_text(errors="replace").splitlines():
+                  if re.search(r"error CS[0-9]+|(?:InvalidOperation|NullReference|Argument|TypeLoad|FileNotFound)Exception:|^Error: Build failed",line):
+                      if line not in errors: errors.append(line[:1200])
+          state={"run_id":int(os.environ["GITHUB_RUN_ID"]),"state":os.environ["HG_BUILD_STATE"],"attempt":int(os.environ["HG_BUILD_ATTEMPT"]),"source_commit":os.environ["HG_SOURCE_COMMIT"],"errors":errors[:12]}
+          apk=Path("Builds/HabitGarden-test.apk")
+          if state["state"]=="success" and apk.exists():
+              state["apk_bytes"]=apk.stat().st_size
+              state["apk_sha256"]=hashlib.sha256(apk.read_bytes()).hexdigest()
+          endpoint="repos/vinovsh/habit-garden-app/contents/.ci/unity-build-status.json"
+          current=subprocess.run(["gh","api",endpoint+"?ref="+os.environ["GITHUB_REF_NAME"],"--jq",".sha"],capture_output=True,text=True)
+          payload={"message":"Record Unity build "+state["state"],"branch":os.environ["GITHUB_REF_NAME"],"content":base64.b64encode(json.dumps(state).encode()).decode()}
+          if current.returncode==0: payload["sha"]=current.stdout.strip()
+          data=Path(os.environ["RUNNER_TEMP"])/"unity-build-status-payload.json"
+          data.write_text(json.dumps(payload))
+          subprocess.run(["gh","api","--method","PUT",endpoint,"--input",str(data)],check=True,stdout=subprocess.DEVNULL)
+          data.unlink()
+          PY
+          }
+          for build_attempt in 1 2 3; do
+            rm -f "$build_log"
+            publish_status building "$build_attempt"
+            if "$RUNNER_TEMP/unity" build "$GITHUB_WORKSPACE" --target Android --execute-method HabitGarden.Editor.ProjectSetup.BuildApk --editor-version 6000.3.26f1 --allow-dirty-build 2>&1 | tee "$build_log"; then
+              sha256sum Builds/HabitGarden-test.apk
+              unzip -t Builds/HabitGarden-test.apk > "$RUNNER_TEMP/apk-integrity.txt"
+              echo "APK ZIP integrity verified."
+              publish_status success "$build_attempt"
+              exit 0
+            fi
+            publish_status awaiting_fix "$build_attempt"
+            if [ "$build_attempt" = "3" ]; then exit 1; fi
+            echo "Waiting up to 10 minutes for a source fix; this Unity sign-in remains active."
+            updated=false
+            for poll in $(seq 1 60); do
+              git fetch --quiet origin "$GITHUB_REF_NAME"
+              if ! git diff --quiet HEAD FETCH_HEAD -- Assets Packages ProjectSettings Tools; then
+                next_head=$(git rev-parse FETCH_HEAD)
+                git reset --hard "$next_head"
+                updated=true
+                break
+              fi
+              sleep 10
+            done
+            if [ "$updated" != "true" ]; then exit 1; fi
+          done
       - name: Upload APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -100,3 +175,4 @@ jobs:
         run: |
           "$RUNNER_TEMP/unity" auth logout >/dev/null 2>&1 || true
           rm -f "$RUNNER_TEMP/unity-auth-private.log"
+

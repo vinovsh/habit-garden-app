@@ -4,7 +4,9 @@ Unity Android app source for an offline habit tracker with a procedural 3D garde
 
 ## Current status
 
-Initial implementation, **not a verified release**. No APK has been built. Source and cloud build configuration are maintained in https://github.com/vinovsh/habit-garden-app. The authoring environment has no Unity editor or Android toolchain. GitHub Actions compiles and tests the engine independent domain and checks source syntax. Unity-specific tests and APK builds require activation. See `docs/STATUS.md` for all gaps and `docs/CI_BUILD.md` for setup.
+A development APK of the updated UI has been built with Unity 6000.3.26f1 and ARM64 IL2CPP. [Download the test APK artifact](https://github.com/vinovsh/habit-garden-app/actions/runs/38579214414/artifacts/11905075627), extract `HabitGarden-test.apk`, and install it on an Android test device. See `docs/ANDROID_BUILD_RESULT.md` for the exact source commit, checksum and validation limits.
+
+This is a test build, not a verified release. The actual Unity project compiled and packaged successfully; the separate CI source job passed 20 domain tests. Physical-device UI, notification, backup and performance review plus the full Unity EditMode suite remain pending. The updated source is on `codex/habit-garden-ui` in pull request #1.
 
 ## Run in Unity
 
@@ -30,7 +32,7 @@ The script runs the Unity tests before building `Builds/HabitGarden-test.apk`. A
 - Offline daily habits with numeric targets, selected weekdays, pause/archive, deferred edits and corrections.
 - Local coin ledger, purchases, duplicate reward protection and growth linked to completed days.
 - Checksummed JSON journal, checkpoints, damaged-save handling and backup validation.
-- Garden, habit, shop, profile, guide and confirmation screens with safe area handling.
+- Refined TextMeshPro Garden, Habits, Shop, Profile and guide screens with safe areas, active navigation, categories, weekly totals, shop previews, plant selection and pot choices.
 - Original generated pots, stems, branches, leaves, flower petals, decoration and completion audio.
 - Three plant types with sequential organ growth, continuous leaf curl blend shapes and gentle sway.
 - Android notification scheduling and a native Storage Access Framework backup picker.
@@ -47,7 +49,7 @@ Ad creatives can be full screen, but the app only opens one after the user expli
 - `Assets/App/Domain`: engine independent rules and serializable records.
 - `Assets/App/Runtime`: persistence, UI, plant generation, ads, audio and reminders.
 - `Assets/App/Editor`: project setup and APK build entry point.
-- `Assets/App/Tests/EditMode`: 24 authored Unity tests; 16 domain tests passed through .NET in GitHub Actions. Full Unity execution is pending activation.
+- `Assets/App/Tests/EditMode`: 28 authored Unity tests; 20 domain tests passed through .NET in GitHub Actions. Full Unity execution is pending activation.
 - `Assets/Plugins/Android`: portable JSON backup document picker.
 - `Tools`: build and source validation scripts.
 - `docs`: implementation status and requirements.
@@ -64,3 +66,4 @@ All meshes and audio in this prototype are generated from source; no user artwor
 - Rewarded ads: https://developers.google.com/admob/unity/rewarded
 - Consent: https://developers.google.com/admob/unity/privacy
 - Android notifications: https://docs.unity3d.com/Packages/com.unity.mobile.notifications@2.5/manual/Android.html
+

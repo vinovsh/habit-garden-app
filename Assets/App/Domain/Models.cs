@@ -24,6 +24,7 @@ namespace HabitGarden.Domain
     [Serializable] public sealed class Habit
     {
         public string id, title, species, createdUtc;
+        public string category = "Personal";
         public int target = 1, weekdays = 127;
         public bool paused, archived;
         public int reminderMinutes = -1;
@@ -67,3 +68,4 @@ namespace HabitGarden.Domain
         public static int Price(string item) => item == "leafy" ? 50 : item == "rainbow" ? 80 : item == "fence" ? 70 : item == "butterfly" ? 60 : throw new ArgumentException("Unknown item");
     }
 }
+
