@@ -1,0 +1,85 @@
+name: Unity browser sign-in and Android build
+on:
+  push:
+    paths:
+      - '.github/workflows/unity-browser-build.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install verified Unity CLI
+        shell: bash
+        run: |
+          curl --fail --location --silent --show-error https://public-cdn.cloud.unity3d.com/hub/prod/cli/1.0.0-beta.13/unity-linux-x64 -o "$RUNNER_TEMP/unity"
+          echo "a84dace1f5e85b629fff841ddfc5ec8e97fd2a178242fca91c80bc5680142fb3  $RUNNER_TEMP/unity" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/unity"
+      - name: Wait for browser approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth_log="$RUNNER_TEMP/unity-auth-private.log"
+          timeout 1200 "$RUNNER_TEMP/unity" auth login > "$auth_log" 2>&1 &
+          auth_pid=$!
+          for attempt in $(seq 1 120); do
+            login_url=$(sed -nE 's/.*(https:\/\/services\.api\.unity\.com[^[:space:]]*).*/\1/p' "$auth_log" | head -n 1)
+            if [ -n "$login_url" ]; then
+              printf 'UNITY_BROWSER_APPROVAL_URL=%s\n' "$login_url"
+              break
+            fi
+            if ! kill -0 "$auth_pid" 2>/dev/null; then
+              echo "Unity CLI exited before producing a browser link."
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ -z "$login_url" ]; then echo "No browser link received."; exit 1; fi
+          if wait "$auth_pid"; then
+            echo "UNITY_ACCOUNT_CONNECTED"
+          else
+            echo "Unity sign-in did not complete successfully."
+            exit 1
+          fi
+          rm -f "$auth_log"
+      - name: Wait for explicit license agreement approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Waiting for explicit Personal and Android module agreement approval."
+          for attempt in $(seq 1 120); do
+            consent=$(gh api repos/vinovsh/habit-garden-app/contents/.ci/unity-license-consent.json --jq .content 2>/dev/null | base64 --decode 2>/dev/null || true)
+            if printf '%s' "$consent" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get("personal_and_android_module_agreements_accepted") is True else 1)' 2>/dev/null; then
+              echo "License agreement approval recorded."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "No license agreement approval recorded; stopping without accepting agreements."
+          exit 1
+      - name: Activate Personal and install Android editor
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/unity" license activate --personal --accept-eula
+          "$RUNNER_TEMP/unity" install 6000.3.26f1 -m android --cm --accept-eula
+      - name: Build Android APK
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/unity" build "$GITHUB_WORKSPACE" --target Android --execute-method HabitGarden.Editor.ProjectSetup.BuildApk --editor-version 6000.3.26f1 --allow-dirty-build
+      - name: Upload APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: HabitGarden-test-apk
+          path: Builds/HabitGarden-test.apk
+          if-no-files-found: error
+      - name: Remove temporary authentication
+        if: always()
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/unity" auth logout >/dev/null 2>&1 || true
+          rm -f "$RUNNER_TEMP/unity-auth-private.log"
