@@ -1,4 +1,5 @@
 name: Unity browser sign-in and Android build
+# UI build: browser sign-in authorized by the owner in this session.
 # Browser approval links must be completed promptly; Unity CLI has its own timeout.
 on:
   push:
