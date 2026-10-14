@@ -5,6 +5,7 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using TMPro;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
@@ -15,6 +16,14 @@ namespace HabitGarden.Editor
         [MenuItem("Habit Garden/Prepare project")]
         public static void Prepare() {
             Directory.CreateDirectory("Assets/Settings");Directory.CreateDirectory("Assets/Scenes");Directory.CreateDirectory("Assets/Resources");AssetDatabase.Refresh();
+            if(AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Resources/GardenFont.asset")==null) {
+                var font=TMP_FontAsset.CreateFontAsset(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
+                font.name="GardenFont";AssetDatabase.CreateAsset(font,"Assets/Resources/GardenFont.asset");
+                foreach(var atlas in font.atlasTextures)AssetDatabase.AddObjectToAsset(atlas,font);
+                AssetDatabase.AddObjectToAsset(font.material,font);
+                font.TryAddCharacters("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?':;/-+()✓•·");
+                EditorUtility.SetDirty(font);
+            }
             var pipeline=AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>("Assets/Settings/GardenPipeline.asset");
             if(pipeline==null) {
                 var renderer=ScriptableObject.CreateInstance<UniversalRendererData>();AssetDatabase.CreateAsset(renderer,"Assets/Settings/GardenRenderer.asset");
@@ -49,3 +58,4 @@ namespace HabitGarden.Editor
         }
     }
 }
+

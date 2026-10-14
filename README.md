@@ -30,7 +30,7 @@ The script runs the Unity tests before building `Builds/HabitGarden-test.apk`. A
 - Offline daily habits with numeric targets, selected weekdays, pause/archive, deferred edits and corrections.
 - Local coin ledger, purchases, duplicate reward protection and growth linked to completed days.
 - Checksummed JSON journal, checkpoints, damaged-save handling and backup validation.
-- Garden, habit, shop, profile, guide and confirmation screens with safe area handling.
+- Refined TextMeshPro Garden, Habits, Shop, Profile and guide screens with safe areas, active navigation, categories, weekly totals, shop previews, plant selection and pot choices.
 - Original generated pots, stems, branches, leaves, flower petals, decoration and completion audio.
 - Three plant types with sequential organ growth, continuous leaf curl blend shapes and gentle sway.
 - Android notification scheduling and a native Storage Access Framework backup picker.
@@ -64,3 +64,4 @@ All meshes and audio in this prototype are generated from source; no user artwor
 - Rewarded ads: https://developers.google.com/admob/unity/rewarded
 - Consent: https://developers.google.com/admob/unity/privacy
 - Android notifications: https://docs.unity3d.com/Packages/com.unity.mobile.notifications@2.5/manual/Android.html
+

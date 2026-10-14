@@ -31,13 +31,13 @@ namespace HabitGarden.Domain
         {
             if(state.lastDate!=Today || state.habits.Any(x=>x.changeDate!="" && String.CompareOrdinal(x.changeDate,Today)<=0)) Apply(s=>{});
         }
-        public string Add(string title, string species, int target=1, int weekdays=127)
+        public string Add(string title, string species, int target=1, int weekdays=127, string category="Personal")
         {
             CheckHabit(title,species,target,weekdays);
             string id=Guid.NewGuid().ToString("N");
             Apply(s=>{
                 if(s.habits.Count(x=>!x.archived)>=20) throw new InvalidOperationException("The limit is 20 active habits.");
-                s.habits.Add(new Habit {id=id,title=title.Trim(),species=species,target=target,weekdays=weekdays,createdUtc=clock.Now.UtcDateTime.ToString("O")});
+                s.habits.Add(new Habit {id=id,title=title.Trim(),category=CheckCategory(category),species=species,target=target,weekdays=weekdays,createdUtc=clock.Now.UtcDateTime.ToString("O")});
                 AddPlant(s,id,species);
             }); return id;
         }
@@ -46,11 +46,12 @@ namespace HabitGarden.Domain
             int index=s.plants.Count;
             s.plants.Add(new Plant {id=Guid.NewGuid().ToString("N"),habitId=habitId,species=species,seed=Guid.NewGuid().GetHashCode() & int.MaxValue,plot=index/12,slot=index%12});
         }
-        public void Edit(string id,string title,int target,int weekdays,int reminderMinutes)
+        public void Edit(string id,string title,int target,int weekdays,int reminderMinutes,string category=null)
         {
             var h=state.habits.Single(x=>x.id==id); CheckHabit(title,h.species,target,weekdays);
             if(reminderMinutes < -1 || reminderMinutes>=1440) throw new ArgumentException("Invalid reminder time");
             Apply(s=>{var x=s.habits.Single(v=>v.id==id); x.pendingTitle=title.Trim(); x.pendingTarget=target; x.pendingWeekdays=weekdays;
+                if(category!=null)x.category=CheckCategory(category);
                 x.changeDate=clock.Now.Date.AddDays(1).ToString("yyyy-MM-dd",CultureInfo.InvariantCulture); x.reminderMinutes=reminderMinutes;});
         }
         public void SetPaused(string id,bool paused) => Apply(s=>s.habits.Single(x=>x.id==id).paused=paused);
@@ -129,6 +130,11 @@ namespace HabitGarden.Domain
                 count++;
             }return count;
         }
+        static string CheckCategory(string category)
+        {
+            if(!new[]{"Personal","Health","Mindfulness","Learning","Movement"}.Contains(category)) throw new ArgumentException("Choose a valid category.");
+            return category;
+        }
         static void CheckHabit(string title,string species,int target,int days)
         {
             if(String.IsNullOrWhiteSpace(title) || title.Trim().Length>60) throw new ArgumentException("Use a title between 1 and 60 characters.");
@@ -150,3 +156,4 @@ namespace HabitGarden.Domain
         }
     }
 }
+

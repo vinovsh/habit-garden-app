@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HabitGarden.Domain;
@@ -14,9 +15,23 @@ namespace HabitGarden
         string decorationKey="";
         int plot;
         public int Plot => plot;
+        RenderTexture texture;
+        public RenderTexture Texture => texture;
+        public event Action<string> Selected;
+        public void Pick(Vector2 position)
+        {
+            if (!cameraView.enabled) return;
+            var ray = cameraView.ViewportPointToRay(new Vector3(position.x,position.y,0));
+            if (Physics.Raycast(ray,out var hit,20))
+            {
+                var target = hit.collider.GetComponent<GardenPlantTarget>();
+                if (target != null) Selected?.Invoke(target.plantId);
+            }
+        }
         public void Init() {
             world=new GameObject("Garden diorama").transform;world.SetParent(transform,false);
             cameraView=new GameObject("Garden camera",typeof(Camera),typeof(AudioListener)).GetComponent<Camera>();cameraView.transform.SetParent(transform,false);
+            texture=new RenderTexture(768,466,16);texture.name="Garden card render";texture.Create();cameraView.targetTexture=texture;
             cameraView.tag="MainCamera";cameraView.clearFlags=CameraClearFlags.SolidColor;cameraView.backgroundColor=new Color(.98f,.96f,.90f);
             cameraView.orthographic=true;cameraView.orthographicSize=2.1f;
             cameraView.transform.position=new Vector3(3,4,-4);cameraView.transform.LookAt(new Vector3(0,.45f,0));
@@ -28,7 +43,7 @@ namespace HabitGarden
         void Shape(PrimitiveType type,string name,Vector3 pos,Vector3 size,Color c) {
             var go=GameObject.CreatePrimitive(type);go.name=name;go.transform.SetParent(world,false);go.transform.localPosition=pos;go.transform.localScale=size;Destroy(go.GetComponent<Collider>());go.GetComponent<Renderer>().sharedMaterial=GardenMaterials.Get(name,c);
         }
-        public void Show(bool enabled){world.gameObject.SetActive(enabled);cameraView.rect=enabled?new Rect(.02f,.26f,.96f,.48f):new Rect(0,0,1,1);}
+        public void Show(bool enabled){world.gameObject.SetActive(enabled);cameraView.enabled=enabled;cameraView.rect=new Rect(0,0,1,1);}
         public void SetPlot(int index,AppState state){plot=Mathf.Max(0,index);Refresh(state,true);}
         public void Refresh(AppState state,bool rebuild=false) {
             string key=string.Join(",",state.inventory);
@@ -38,7 +53,10 @@ namespace HabitGarden
             foreach(var model in shown) {
                 if(!plants.TryGetValue(model.id,out var view)) {
                     var go=new GameObject("Plant "+model.species);go.transform.SetParent(world,false);go.transform.localPosition=new Vector3(-.98f+(model.slot%4)*.65f,0,-.65f+(model.slot/4)*.65f);
-                    go.transform.localScale=Vector3.one*.70f;view=go.AddComponent<GrowingPlant>();view.Init(model,state.settings.reducedMotion);plants[model.id]=view;
+                    go.transform.localScale=Vector3.one*.70f;
+                    var target=go.AddComponent<GardenPlantTarget>();target.plantId=model.id;
+                    var collider=go.AddComponent<SphereCollider>();collider.center=new Vector3(0,.40f,0);collider.radius=.43f;
+                    view=go.AddComponent<GrowingPlant>();view.Init(model,state.settings.reducedMotion);plants[model.id]=view;
                 }else view.SetTarget(model,state.settings.reducedMotion);
             }
             Application.targetFrameRate=state.settings.quality=="Medium"?60:30;
@@ -53,6 +71,7 @@ namespace HabitGarden
                 var wing=GameObject.CreatePrimitive(PrimitiveType.Sphere);wing.name="Butterfly wing";wing.transform.SetParent(decorations,false);wing.transform.localPosition=new Vector3(1.1f+(i==0?-.09f:.09f),.6f,-.8f);wing.transform.localScale=new Vector3(.18f,.25f,.04f);wing.transform.localRotation=Quaternion.Euler(0,0,i==0?-25:25);Destroy(wing.GetComponent<Collider>());wing.GetComponent<Renderer>().sharedMaterial=GardenMaterials.Get("butterfly",new Color(.76f,.56f,.90f));
             }
         }
-        void OnDestroy(){GardenMaterials.Clear();}
+        void OnDestroy(){if(texture!=null){cameraView.targetTexture=null;texture.Release();Destroy(texture);}GardenMaterials.Clear();}
     }
 }
+

@@ -13,6 +13,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../../Assets/App/Domain/*.cs" Link="Domain/%(Filename)%(Extension)" />
+    <Compile Include="../../Assets/App/Tests/EditMode/GardenPresentationTests.cs" Link="Tests/GardenPresentationTests.cs" />
     <Compile Include="../../Assets/App/Tests/EditMode/HabitServiceTests.cs" Link="Tests/HabitServiceTests.cs" />
   </ItemGroup>
 </Project>
+
