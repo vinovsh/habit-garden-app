@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
-using UnityEditor.PackageManager;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -48,7 +47,7 @@ namespace HabitGarden.Editor
         {
             const string destination="Assets/Resources/GardenFont.asset";
             if(AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(destination)!=null)return;
-            var package=PackageInfo.FindForAssetPath("Packages/com.unity.ugui/package.json");
+            var package=UnityEditor.PackageManager.PackageInfo.FindForAssetPath("Packages/com.unity.ugui/package.json");
             if(package==null)throw new InvalidOperationException("Resolve the Unity uGUI package before preparing the project.");
             string essentials=Path.Combine(package.resolvedPath,"Package Resources/TMP Essential Resources.unitypackage");
             if(File.Exists(essentials) && (Shader.Find("TextMeshPro/Distance Field")==null || AssetDatabase.LoadAssetAtPath<Font>("Assets/TextMesh Pro/Fonts/LiberationSans.ttf")==null)) {
